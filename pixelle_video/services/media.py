@@ -64,7 +64,33 @@ class MediaService(ComfyBaseService):
             core: PixelleVideoCore instance (for accessing shared ComfyKit)
         """
         super().__init__(config, service_name="image", core=core)  # Keep "image" for config compatibility
+        self._image_backend = self._create_image_backend()
     
+    def _create_image_backend(self):
+        """Create image backend based on provider config"""
+        provider = self.config.get("provider", "comfyui")
+        if provider == "openai":
+            from pixelle_video.services.image_backends.openai import OpenAIImageBackend
+            try:
+                return OpenAIImageBackend(self.config.get("openai", {}))
+            except ValueError as e:
+                from pixelle_video.services.image_backends.comfyui import ComfyUIBackend
+                from loguru import logger
+                logger.warning(f"OpenAI backend init failed: {e}. Falling back to ComfyUI.")
+                return ComfyUIBackend(self, self.config)
+        from pixelle_video.services.image_backends.comfyui import ComfyUIBackend
+        return ComfyUIBackend(self, self.config)
+
+    def _create_and_set_backend(self, provider: str):
+        """Temporarily override image backend for current request"""
+        from pixelle_video.services.image_backends.comfyui import ComfyUIBackend
+        from pixelle_video.services.image_backends.openai import OpenAIImageBackend
+
+        if provider == "openai":
+            self._image_backend = OpenAIImageBackend(self.config.get("openai", {}))
+        else:
+            self._image_backend = ComfyUIBackend(self, self.config)
+
     def _scan_workflows(self):
         """
         Scan workflows for both image_ and video_ prefixes
@@ -194,6 +220,21 @@ class MediaService(ComfyBaseService):
                 comfyui_url="http://192.168.1.100:8188"
             )
         """
+        # Route image generation through backend strategy
+        if media_type == "image" and self._image_backend is not None:
+            return await self._image_backend.generate(
+                prompt=prompt,
+                width=width,
+                height=height,
+                workflow=workflow,
+                negative_prompt=negative_prompt,
+                steps=steps,
+                seed=seed,
+                cfg=cfg,
+                sampler=sampler,
+                **params,
+            )
+
         # 1. Resolve workflow (returns structured info)
         workflow_info = self._resolve_workflow(workflow=workflow)
         
