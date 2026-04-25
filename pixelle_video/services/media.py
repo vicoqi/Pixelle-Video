@@ -64,35 +64,34 @@ class MediaService(ComfyBaseService):
             core: PixelleVideoCore instance (for accessing shared ComfyKit)
         """
         super().__init__(config, service_name="image", core=core)  # Keep "image" for config compatibility
-        self._image_backend = self._create_image_backend()
-    
-    def _create_image_backend(self):
-        """Create image backend based on provider config"""
-        provider = self.config.get("provider", "comfyui")
+        self._backend_cache = {}
+        self._image_backend = self._instantiate_backend(self.config.get("provider", "comfyui"))
+
+    def _instantiate_backend(self, provider: str):
+        """Create image backend for given provider (cached)"""
+        if provider in self._backend_cache:
+            return self._backend_cache[provider]
+
         if provider == "openai":
             from pixelle_video.services.image_backends.openai import OpenAIImageBackend
             try:
-                return OpenAIImageBackend(self.config.get("openai", {}))
+                backend = OpenAIImageBackend(self.config.get("openai", {}))
+                self._backend_cache[provider] = backend
+                return backend
             except ValueError as e:
-                from pixelle_video.services.image_backends.comfyui import ComfyUIBackend
-                from loguru import logger
                 logger.warning(f"OpenAI backend init failed: {e}. Falling back to ComfyUI.")
-                return ComfyUIBackend(self, self.config)
-        from pixelle_video.services.image_backends.comfyui import ComfyUIBackend
-        return ComfyUIBackend(self, self.config)
+                provider = "comfyui"
+                if provider in self._backend_cache:
+                    return self._backend_cache[provider]
 
-    def _create_and_set_backend(self, provider: str):
-        """Temporarily override image backend for current request"""
         from pixelle_video.services.image_backends.comfyui import ComfyUIBackend
-        from pixelle_video.services.image_backends.openai import OpenAIImageBackend
+        backend = ComfyUIBackend(self, self.config)
+        self._backend_cache[provider] = backend
+        return backend
 
-        if provider == "openai":
-            try:
-                self._image_backend = OpenAIImageBackend(self.config.get("openai", {}))
-                return
-            except ValueError as e:
-                logger.warning(f"Failed to create OpenAI backend: {e}. Falling back to ComfyUI.")
-        self._image_backend = ComfyUIBackend(self, self.config)
+    def set_provider(self, provider: str):
+        """Switch image generation provider"""
+        self._image_backend = self._instantiate_backend(provider)
 
     def _scan_workflows(self):
         """

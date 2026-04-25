@@ -47,7 +47,7 @@ async def image_generate(
 
         # If provider specified in request, temporarily override backend
         if request.provider:
-            pixelle_video.media._create_and_set_backend(request.provider)
+            pixelle_video.media.set_provider(request.provider)
 
         media_result = await pixelle_video.media(
             prompt=request.prompt,

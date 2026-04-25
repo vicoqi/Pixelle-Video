@@ -1,6 +1,3 @@
-import base64
-import uuid
-from pathlib import Path
 from typing import Optional
 
 from loguru import logger
@@ -94,24 +91,12 @@ class OpenAIImageBackend(ImageBackend):
                 n=1,
                 size=size,
                 quality=self._quality,
-                response_format="b64_json",
             )
         except Exception as e:
             logger.error(f"OpenAI image generation failed: {e}")
             raise
 
-        image_b64 = response.data[0].b64_json
-        image_bytes = base64.b64decode(image_b64)
+        image_url = response.data[0].url
+        logger.info(f"OpenAI generated image: {image_url}")
 
-        # Save to output directory
-        output_dir = Path("output") / "openai_images"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        image_filename = f"{uuid.uuid4().hex}.png"
-        image_path = str(output_dir / image_filename)
-
-        with open(image_path, "wb") as f:
-            f.write(image_bytes)
-
-        logger.info(f"OpenAI generated image saved: {image_path}")
-
-        return MediaResult(media_type="image", url=image_path)
+        return MediaResult(media_type="image", url=image_url)

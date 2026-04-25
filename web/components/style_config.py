@@ -732,13 +732,13 @@ def render_style_config(pixelle_video):
                 workflow_key = None
 
                 # Override provider in media service for this session
-                if hasattr(pixelle_video.media, '_create_and_set_backend'):
-                    pixelle_video.media._create_and_set_backend("openai")
+                if hasattr(pixelle_video.media, 'set_provider'):
+                    pixelle_video.media.set_provider("openai")
             else:
                 # ComfyUI provider: show workflow selector (existing code)
                 # Restore ComfyUI backend if switching from OpenAI
-                if hasattr(pixelle_video.media, '_create_and_set_backend'):
-                    pixelle_video.media._create_and_set_backend("comfyui")
+                if hasattr(pixelle_video.media, 'set_provider'):
+                    pixelle_video.media.set_provider("comfyui")
 
                 # Get available workflows and filter by template type
                 all_workflows = pixelle_video.media.list_workflows()
