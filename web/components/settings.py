@@ -289,7 +289,36 @@ def render_advanced_settings():
                     )
                     # Convert display value back to actual value
                     runninghub_48g_enabled = runninghub_instance_type_display == tr("settings.comfyui.runninghub_instance_48g")
-        
+
+                st.markdown("---")
+
+                # GLM vision model configuration
+                st.markdown(f"**{tr('settings.glm.title')}**")
+                glm_config = config_manager.get_glm_config()
+                glm_api_key = st.text_input(
+                    tr("settings.glm.api_key"),
+                    value=glm_config.get("api_key", ""),
+                    type="password",
+                    help=tr("settings.glm.api_key_help"),
+                    key="glm_api_key_input"
+                )
+                glm_base_url_col, glm_model_col = st.columns(2)
+                with glm_base_url_col:
+                    glm_base_url = st.text_input(
+                        tr("settings.glm.base_url"),
+                        value=glm_config.get("base_url", ""),
+                        help=tr("settings.glm.base_url_help"),
+                        key="glm_base_url_input"
+                    )
+                with glm_model_col:
+                    glm_model = st.text_input(
+                        tr("settings.glm.model"),
+                        value=glm_config.get("model", "glm-4.6v"),
+                        help=tr("settings.glm.model_help"),
+                        key="glm_model_input"
+                    )
+                st.caption(tr("settings.glm.hint"))
+
         # ====================================================================
         # Action Buttons (full width at bottom)
         # ====================================================================
@@ -315,7 +344,15 @@ def render_advanced_settings():
                         runninghub_concurrent_limit=int(runninghub_concurrent_limit),
                         runninghub_instance_type=instance_type
                     )
-                    
+
+                    # Save GLM configuration
+                    if glm_api_key:
+                        config_manager.set_glm_config(
+                            api_key=glm_api_key,
+                            base_url=glm_base_url,
+                            model=glm_model
+                        )
+
                     # Only save to file if LLM config is valid
                     if llm_api_key and llm_base_url and llm_model:
                         config_manager.save()
