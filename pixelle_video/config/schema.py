@@ -26,6 +26,13 @@ class LLMConfig(BaseModel):
     model: str = Field(default="", description="LLM Model Name")
 
 
+class GLMConfig(BaseModel):
+    """GLM vision model configuration"""
+    api_key: str = Field(default="", description="GLM API Key")
+    base_url: str = Field(default="", description="GLM API Base URL (optional)")
+    model: str = Field(default="glm-4.6v", description="GLM vision model name")
+
+
 class TTSLocalConfig(BaseModel):
     """Local TTS configuration (Edge TTS)"""
     voice: str = Field(default="zh-CN-YunjianNeural", description="Edge TTS voice ID")
@@ -94,7 +101,8 @@ class PixelleVideoConfig(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     comfyui: ComfyUIConfig = Field(default_factory=ComfyUIConfig)
     template: TemplateConfig = Field(default_factory=TemplateConfig)
-    
+    glm: GLMConfig = Field(default_factory=GLMConfig, description="GLM vision model configuration")
+
     def is_llm_configured(self) -> bool:
         """Check if LLM is properly configured"""
         return bool(
