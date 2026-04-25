@@ -42,6 +42,11 @@ def _resolve_size(
     elif h > w * 3:
         h = w * 3
 
+    # Enforce minimum total pixels (655,360)
+    if w * h < 655_360:
+        h = max(h, 816)
+        w = max(w, 816)
+
     return f"{w}x{h}"
 
 
@@ -91,12 +96,15 @@ class OpenAIImageBackend(ImageBackend):
                 n=1,
                 size=size,
                 quality=self._quality,
+                response_format="url",
             )
         except Exception as e:
             logger.error(f"OpenAI image generation failed: {e}")
             raise
 
         image_url = response.data[0].url
+        if not image_url:
+            raise Exception("OpenAI returned no image URL (response.data[0].url is None)")
         logger.info(f"OpenAI generated image: {image_url}")
 
         return MediaResult(media_type="image", url=image_url)

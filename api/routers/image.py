@@ -45,15 +45,12 @@ async def image_generate(
     try:
         logger.info(f"Image generation request: {request.prompt[:50]}...")
 
-        # If provider specified in request, temporarily override backend
-        if request.provider:
-            pixelle_video.media.set_provider(request.provider)
-
         media_result = await pixelle_video.media(
             prompt=request.prompt,
             width=request.width,
             height=request.height,
-            workflow=request.workflow
+            workflow=request.workflow,
+            provider=request.provider,
         )
         
         # For backward compatibility, only support image results in /image endpoint

@@ -141,6 +141,8 @@ class MediaService(ComfyBaseService):
         workflow: Optional[str] = None,
         # Media type specification (required for proper handling)
         media_type: str = "image",  # "image" or "video"
+        # Provider override (per-request, does not mutate singleton state)
+        provider: Optional[str] = None,
         # ComfyUI connection (optional overrides)
         comfyui_url: Optional[str] = None,
         runninghub_api_key: Optional[str] = None,
@@ -223,8 +225,9 @@ class MediaService(ComfyBaseService):
             )
         """
         # Route image generation through backend strategy
-        if media_type == "image" and self._image_backend is not None:
-            return await self._image_backend.generate(
+        backend = self._instantiate_backend(provider) if provider else self._image_backend
+        if media_type == "image" and backend is not None:
+            return await backend.generate(
                 prompt=prompt,
                 width=width,
                 height=height,
