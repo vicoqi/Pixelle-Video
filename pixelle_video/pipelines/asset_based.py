@@ -218,10 +218,10 @@ class AssetBasedPipeline(LinearVideoPipeline):
             
             # Determine asset type
             asset_type = self._get_asset_type(asset_path_obj)
-            
+            provider = context.request.get("provider", "comfyui")
+            source = context.request.get("source", "runninghub")
+
             if asset_type == "image":
-                provider = context.request.get("provider", "comfyui")
-                source = context.request.get("source", "runninghub")
                 description = await self.core.analyze_image(asset_path, provider=provider, source=source)
                 
                 self.asset_index[asset_path] = {
@@ -234,8 +234,6 @@ class AssetBasedPipeline(LinearVideoPipeline):
                 logger.info(f"✅ Image analyzed: {description[:50]}...")
             
             elif asset_type == "video":
-                provider = context.request.get("provider", "comfyui")
-                source = context.request.get("source", "runninghub")
                 try:
                     description = await self.core.analyze_video(asset_path, provider=provider, source=source)
                     

@@ -18,6 +18,7 @@ Supports streaming responses with thinking mode.
 
 import asyncio
 import base64
+import mimetypes
 from pathlib import Path
 
 from loguru import logger
@@ -39,22 +40,14 @@ class GLMAnalysisService:
 
     async def analyze_image(self, image_path: str, prompt: str = "请详细描述这张图片的内容") -> str:
         """Analyze image via GLM-4.6V streaming API"""
-        path = Path(image_path)
-        if not path.exists():
-            raise FileNotFoundError(f"Image not found: {image_path}")
-
-        logger.info(f"GLM analyzing image: {path.name}")
-        base64_url = self._encode_image(path)
+        logger.info(f"GLM analyzing image: {Path(image_path).name}")
+        base64_url = self._encode_file(image_path)
         return await self._analyze(base64_url, prompt)
 
     async def analyze_video(self, video_path: str, prompt: str = "请详细描述这个视频的内容") -> str:
         """Analyze video via GLM-4.6V streaming API"""
-        path = Path(video_path)
-        if not path.exists():
-            raise FileNotFoundError(f"Video not found: {video_path}")
-
-        logger.info(f"GLM analyzing video: {path.name}")
-        base64_url = self._encode_video(path)
+        logger.info(f"GLM analyzing video: {Path(video_path).name}")
+        base64_url = self._encode_file(video_path)
         return await self._analyze(base64_url, prompt)
 
     async def _analyze(self, media_url: str, prompt: str) -> str:
@@ -87,18 +80,10 @@ class GLMAnalysisService:
 
         return await asyncio.to_thread(_call)
 
-    def _encode_image(self, path: Path) -> str:
-        """Encode image to data:image/xxx;base64,... format"""
-        suffix = path.suffix.lower().lstrip(".")
-        mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "webp": "webp", "gif": "gif"}.get(suffix, "jpeg")
+    def _encode_file(self, file_path: str) -> str:
+        """Encode file to data:mime/type;base64,... format"""
+        path = Path(file_path)
+        mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         with open(path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode("utf-8")
-        return f"data:image/{mime};base64,{b64}"
-
-    def _encode_video(self, path: Path) -> str:
-        """Encode video to data:video/xxx;base64,... format"""
-        suffix = path.suffix.lower().lstrip(".")
-        mime = {"mp4": "mp4", "mov": "quicktime", "avi": "x-msvideo", "webm": "webm"}.get(suffix, "mp4")
-        with open(path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode("utf-8")
-        return f"data:video/{mime};base64,{b64}"
+        return f"data:{mime_type};base64,{b64}"
