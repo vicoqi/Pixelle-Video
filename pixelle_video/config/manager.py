@@ -136,8 +136,16 @@ class ConfigManager:
                 "default_workflow": self.config.comfyui.tts.default_workflow,
             },
             "image": {
+                "provider": self.config.comfyui.image.provider,
                 "default_workflow": self.config.comfyui.image.default_workflow,
                 "prompt_prefix": self.config.comfyui.image.prompt_prefix,
+                "openai": {
+                    "api_key": self.config.comfyui.image.openai.api_key,
+                    "base_url": self.config.comfyui.image.openai.base_url,
+                    "model": self.config.comfyui.image.openai.model,
+                    "quality": self.config.comfyui.image.openai.quality,
+                    "size": self.config.comfyui.image.openai.size,
+                },
             },
             "video": {
                 "default_workflow": self.config.comfyui.video.default_workflow,
