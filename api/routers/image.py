@@ -30,20 +30,25 @@ async def image_generate(
 ):
     """
     Image generation endpoint
-    
-    Generate image from text prompt using ComfyKit.
-    
+
+    Generate image from text prompt.
+    Supports both ComfyUI and OpenAI backends.
+
     - **prompt**: Image description/prompt
     - **width**: Image width (512-2048)
     - **height**: Image height (512-2048)
-    - **workflow**: Optional custom workflow filename
-    
+    - **workflow**: Optional custom workflow filename (ComfyUI only)
+    - **provider**: Optional provider override ("comfyui" or "openai")
+
     Returns path to generated image.
     """
     try:
         logger.info(f"Image generation request: {request.prompt[:50]}...")
-        
-        # Call media service (backward compatible with image API)
+
+        # If provider specified in request, temporarily override backend
+        if request.provider:
+            pixelle_video.media._create_and_set_backend(request.provider)
+
         media_result = await pixelle_video.media(
             prompt=request.prompt,
             width=request.width,

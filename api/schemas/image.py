@@ -24,7 +24,8 @@ class ImageGenerateRequest(BaseModel):
     width: int = Field(1024, ge=512, le=2048, description="Image width")
     height: int = Field(1024, ge=512, le=2048, description="Image height")
     workflow: Optional[str] = Field(None, description="Custom workflow filename")
-    
+    provider: Optional[str] = Field(None, description="Image generation provider: comfyui or openai")
+
     class Config:
         json_schema_extra = {
             "example": {
