@@ -728,14 +728,6 @@ def render_style_config(pixelle_video):
                 openai_config = comfyui_config.get("image", {}).get("openai", {})
                 st.info(f"OpenAI Model: **{openai_config.get('model', 'gpt-image-2')}** | Size: **{openai_config.get('size', '1024x1024')}** | Quality: **{openai_config.get('quality', 'medium')}**")
 
-                # OpenAI size selector
-                openai_size = st.selectbox(
-                    "Output Size",
-                    options=["1024x1024", "1536x1024", "1024x1536", "auto"],
-                    index=0,
-                    key="openai_size_select",
-                )
-
                 # No workflow key needed for OpenAI
                 workflow_key = None
 

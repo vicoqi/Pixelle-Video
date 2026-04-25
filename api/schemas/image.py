@@ -14,7 +14,7 @@
 Image generation API schemas
 """
 
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
@@ -24,7 +24,7 @@ class ImageGenerateRequest(BaseModel):
     width: int = Field(1024, ge=512, le=2048, description="Image width")
     height: int = Field(1024, ge=512, le=2048, description="Image height")
     workflow: Optional[str] = Field(None, description="Custom workflow filename")
-    provider: Optional[str] = Field(None, description="Image generation provider: comfyui or openai")
+    provider: Optional[Literal["comfyui", "openai"]] = Field(None, description="Image generation provider: comfyui or openai")
 
     class Config:
         json_schema_extra = {

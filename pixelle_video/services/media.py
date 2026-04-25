@@ -87,9 +87,12 @@ class MediaService(ComfyBaseService):
         from pixelle_video.services.image_backends.openai import OpenAIImageBackend
 
         if provider == "openai":
-            self._image_backend = OpenAIImageBackend(self.config.get("openai", {}))
-        else:
-            self._image_backend = ComfyUIBackend(self, self.config)
+            try:
+                self._image_backend = OpenAIImageBackend(self.config.get("openai", {}))
+                return
+            except ValueError as e:
+                logger.warning(f"Failed to create OpenAI backend: {e}. Falling back to ComfyUI.")
+        self._image_backend = ComfyUIBackend(self, self.config)
 
     def _scan_workflows(self):
         """
