@@ -50,6 +50,13 @@ comfyui:
     # Video prompt prefix (optional)
     prompt_prefix: "Minimalist black-and-white matchstick figure style illustration, clean lines, simple sketch style"
 
+# ==================== GLM Vision Model Configuration ====================
+# Used for image/video recognition in asset-based pipeline
+glm:
+  api_key: ""  # ZhipuAI API Key (required for GLM analysis)
+  base_url: ""  # Optional, leave empty for official endpoint
+  model: "glm-4.6v"  # Vision model name
+
 # ==================== Template Configuration ====================
 # Configure default template for video generation
 template:
