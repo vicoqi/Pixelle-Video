@@ -24,6 +24,7 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "python-multipart>=0.0.12",
     "comfykit>=0.1.12",
+    "zai-sdk>=0.2.2",
     "beautifulsoup4>=4.14.2",
     "moviepy==1.0.3",
     "playwright>=1.58.0",
