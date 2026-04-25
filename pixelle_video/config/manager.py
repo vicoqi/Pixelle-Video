@@ -170,3 +170,21 @@ class ConfigManager:
         if updates:
             self.update({"comfyui": updates})
 
+    def get_glm_config(self) -> dict:
+        """Get GLM configuration as dict"""
+        return {
+            "api_key": self.config.glm.api_key,
+            "base_url": self.config.glm.base_url,
+            "model": self.config.glm.model,
+        }
+
+    def set_glm_config(self, api_key: str, base_url: str = "", model: str = "glm-4.6v"):
+        """Set GLM configuration"""
+        self.update({
+            "glm": {
+                "api_key": api_key,
+                "base_url": base_url,
+                "model": model,
+            }
+        })
+
