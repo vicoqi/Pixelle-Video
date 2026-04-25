@@ -74,9 +74,13 @@ class GLMAnalysisService:
             )
             content_parts = []
             for chunk in response:
-                delta = chunk.choices[0].delta
-                if hasattr(delta, "content") and delta.content:
-                    content_parts.append(delta.content)
+                try:
+                    delta = chunk.choices[0].delta
+                    if hasattr(delta, "content") and delta.content:
+                        content_parts.append(delta.content)
+                except (IndexError, AttributeError) as e:
+                    logger.warning(f"Unexpected stream chunk structure: {e}")
+                    continue
             if not content_parts:
                 raise Exception("GLM returned empty response")
             return "".join(content_parts)
