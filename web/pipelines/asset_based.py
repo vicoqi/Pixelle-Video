@@ -179,50 +179,77 @@ class AssetBasedPipelineUI(PipelineUI):
         # Workflow source selection
         with st.container(border=True):
             st.markdown(f"**{tr('asset_based.section.source')}**")
-            
+
             with st.expander(tr("help.feature_description"), expanded=False):
                 st.markdown(f"**{tr('help.what')}**")
                 st.markdown(tr("asset_based.source.what"))
                 st.markdown(f"**{tr('help.how')}**")
                 st.markdown(tr("asset_based.source.how"))
-            
-            source_options = {
-                "runninghub": tr("asset_based.source.runninghub"),
-                "selfhost": tr("asset_based.source.selfhost")
+
+            # Level 1: Provider selection (ComfyUI / GLM-4.6V)
+            provider_options = {
+                "comfyui": tr("asset_based.provider.comfyui"),
+                "glm": tr("asset_based.provider.glm")
             }
-            
-            # Check if RunningHub API key is configured
+
+            # Check configurations
             comfyui_config = config_manager.get_comfyui_config()
-            has_runninghub = bool(comfyui_config.get("runninghub_api_key"))
-            has_selfhost = bool(comfyui_config.get("comfyui_url"))
-            
-            # Default to runninghub always
-            default_source_index = 0
-            
-            source = st.radio(
+            glm_config = config_manager.get_glm_config()
+            has_comfyui = bool(comfyui_config.get("runninghub_api_key")) or bool(comfyui_config.get("comfyui_url"))
+            has_glm = bool(glm_config.get("api_key"))
+
+            default_provider_index = 0 if has_comfyui else (1 if has_glm else 0)
+
+            selected_provider = st.radio(
                 tr("asset_based.source.select"),
-                options=list(source_options.keys()),
-                format_func=lambda x: source_options[x],
-                index=default_source_index,
+                options=list(provider_options.keys()),
+                format_func=lambda x: provider_options[x],
+                index=default_provider_index,
                 horizontal=True,
-                key="asset_source",
+                key="asset_provider",
                 label_visibility="collapsed"
             )
-            
-            # Show hint based on selection
-            if source == "runninghub":
-                if not has_runninghub:
-                    st.warning(tr("asset_based.source.runninghub_not_configured"))
+
+            selected_source = "runninghub"  # default
+
+            # Level 2: ComfyUI source selection (only for ComfyUI provider)
+            if selected_provider == "comfyui":
+                source_options = {
+                    "runninghub": tr("asset_based.source.runninghub"),
+                    "selfhost": tr("asset_based.source.selfhost")
+                }
+
+                has_runninghub = bool(comfyui_config.get("runninghub_api_key"))
+                has_selfhost = bool(comfyui_config.get("comfyui_url"))
+                default_source_index = 0
+
+                selected_source = st.radio(
+                    tr("asset_based.source.select"),
+                    options=list(source_options.keys()),
+                    format_func=lambda x: source_options[x],
+                    index=default_source_index,
+                    horizontal=True,
+                    key="asset_source",
+                    label_visibility="collapsed"
+                )
+
+                if selected_source == "runninghub":
+                    if not has_runninghub:
+                        st.warning(tr("asset_based.source.runninghub_not_configured"))
+                    else:
+                        st.info(tr("asset_based.source.runninghub_hint"))
                 else:
-                    st.info(tr("asset_based.source.runninghub_hint"))
+                    if not has_selfhost:
+                        st.warning(tr("asset_based.source.selfhost_not_configured"))
+                    else:
+                        st.info(tr("asset_based.source.selfhost_hint"))
+                        check_and_warn_selfhost_workflow("selfhost/analyse_image.json")
             else:
-                if not has_selfhost:
-                    st.warning(tr("asset_based.source.selfhost_not_configured"))
+                # GLM provider
+                if not has_glm:
+                    st.warning(tr("asset_based.source.glm_not_configured"))
                 else:
-                    st.info(tr("asset_based.source.selfhost_hint"))
-                    # Check and warn for selfhost mode (auto popup if not confirmed)
-                    # Use analyse_image.json as representative workflow
-                    check_and_warn_selfhost_workflow("selfhost/analyse_image.json")
+                    st.info(tr("asset_based.source.glm_hint"))
         
         # TTS configuration
         with st.container(border=True):
@@ -279,7 +306,8 @@ class AssetBasedPipelineUI(PipelineUI):
         
         return {
             "duration": duration,
-            "source": source,
+            "source": selected_source,
+            "provider": selected_provider,
             "voice_id": voice_id,
             "tts_speed": tts_speed
         }
@@ -384,6 +412,7 @@ class AssetBasedPipelineUI(PipelineUI):
                         intent=video_params.get("intent"),
                         duration=video_params.get("duration", 30),
                         source=video_params.get("source", "runninghub"),
+                        provider=video_params.get("provider", "comfyui"),
                         bgm_path=video_params.get("bgm_path"),
                         bgm_volume=video_params.get("bgm_volume", 0.2),
                         bgm_mode=video_params.get("bgm_mode", "loop"),
