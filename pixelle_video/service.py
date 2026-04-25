@@ -29,6 +29,7 @@ from pixelle_video.services.tts_service import TTSService
 from pixelle_video.services.media import MediaService
 from pixelle_video.services.image_analysis import ImageAnalysisService
 from pixelle_video.services.video_analysis import VideoAnalysisService
+from pixelle_video.services.glm_analysis import GLMAnalysisService
 from pixelle_video.services.video import VideoService
 from pixelle_video.services.frame_processor import FrameProcessor
 from pixelle_video.services.persistence import PersistenceService
@@ -200,6 +201,15 @@ class PixelleVideoCore:
         self.image = self.media  # Alias for backward compatibility
         self.image_analysis = ImageAnalysisService(self.config, core=self)
         self.video_analysis = VideoAnalysisService(self.config, core=self)
+
+        # GLM analysis service (optional, won't block startup if not configured)
+        glm_config = self.config.get("glm", {})
+        try:
+            self.glm_analysis = GLMAnalysisService(glm_config)
+        except ValueError as e:
+            logger.warning(f"GLM analysis service not available: {e}")
+            self.glm_analysis = None
+
         self.video = VideoService()
         self.frame_processor = FrameProcessor(self)
         self.persistence = PersistenceService(output_dir="output")
@@ -293,7 +303,23 @@ class PixelleVideoCore:
             return await pipeline_instance(text=text, **kwargs)
         
         return generate_video_wrapper
-    
+
+    async def analyze_image(self, image_path: str, provider: str = "comfyui", source: str = "runninghub") -> str:
+        """Unified image analysis entry point"""
+        if provider == "glm":
+            if self.glm_analysis is None:
+                raise Exception("GLM analysis service not configured")
+            return await self.glm_analysis.analyze_image(image_path)
+        return await self.image_analysis(image_path, source=source)
+
+    async def analyze_video(self, video_path: str, provider: str = "comfyui", source: str = "runninghub") -> str:
+        """Unified video analysis entry point"""
+        if provider == "glm":
+            if self.glm_analysis is None:
+                raise Exception("GLM analysis service not configured")
+            return await self.glm_analysis.analyze_video(video_path)
+        return await self.video_analysis(video_path, source=source)
+
     @property
     def project_name(self) -> str:
         """Get project name from config"""
