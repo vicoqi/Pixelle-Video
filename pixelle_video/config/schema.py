@@ -50,13 +50,24 @@ class TTSSubConfig(BaseModel):
         return self.comfyui.default_workflow
 
 
+class OpenAIImageConfig(BaseModel):
+    """OpenAI image generation configuration"""
+    api_key: str = Field(default="", description="OpenAI API Key for image generation")
+    base_url: str = Field(default="", description="OpenAI API Base URL (optional, for proxies)")
+    model: str = Field(default="gpt-image-2", description="OpenAI image model name")
+    quality: str = Field(default="medium", description="Image quality: low, medium, high")
+    size: str = Field(default="1024x1024", description="Default image size")
+
+
 class ImageSubConfig(BaseModel):
     """Image-specific configuration (under comfyui.image)"""
+    provider: str = Field(default="comfyui", description="Image generation provider: comfyui or openai")
     default_workflow: Optional[str] = Field(default=None, description="Default image workflow (optional)")
     prompt_prefix: str = Field(
         default="Minimalist black-and-white matchstick figure style illustration, clean lines, simple sketch style",
         description="Prompt prefix for all image generation"
     )
+    openai: OpenAIImageConfig = Field(default_factory=OpenAIImageConfig, description="OpenAI image generation configuration")
 
 
 class VideoSubConfig(BaseModel):

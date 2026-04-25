@@ -32,13 +32,24 @@ comfyui:
   
   # Image-specific configuration
   image:
-    # Required: Default workflow to use (no fallback)
+    # Image generation provider: "comfyui" (default) or "openai"
+    provider: comfyui
+
+    # Required: Default workflow to use (for ComfyUI provider)
     # Options: runninghub/image_flux.json (recommended, no local setup)
     #          selfhost/image_flux.json (requires local ComfyUI)
     default_workflow: runninghub/image_flux.json
-    
+
     # Image prompt prefix (optional)
     prompt_prefix: "Minimalist black-and-white matchstick figure style illustration, clean lines, simple sketch style"
+
+    # OpenAI image generation config (used when provider=openai)
+    openai:
+      api_key: ""           # OpenAI API Key
+      base_url: ""           # Optional: for proxies or compatible APIs
+      model: "gpt-image-2"  # Image generation model
+      quality: "medium"     # Image quality: low, medium, high
+      size: "1024x1024"     # Default output size
   
   # Video-specific configuration
   video:
