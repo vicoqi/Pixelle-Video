@@ -15,6 +15,7 @@ Style configuration components for web UI (middle column)
 """
 
 import os
+import base64
 from pathlib import Path
 
 import streamlit as st
@@ -702,52 +703,93 @@ def render_style_config(pixelle_video):
                     st.markdown(tr('style.video_workflow_how'))
                 else:
                     st.markdown(tr("style.workflow_how"))
-        
-            # Get available workflows and filter by template type
-            all_workflows = pixelle_video.media.list_workflows()
-            
-            # Filter workflows based on template media type
-            if template_media_type == "video":
-                # Only show video_ workflows
-                workflows = [wf for wf in all_workflows if "video_" in wf["key"].lower()]
-            else:
-                # Only show image_ workflows (exclude video_)
-                workflows = [wf for wf in all_workflows if "video_" not in wf["key"].lower()]
-        
-            # Build options for selectbox
-            # Display: "image_flux.json - Runninghub"
-            # Value: "runninghub/image_flux.json"
-            workflow_options = [wf["display_name"] for wf in workflows]
-            workflow_keys = [wf["key"] for wf in workflows]
-        
-            # Default to first option (should be runninghub by sorting)
-            default_workflow_index = 0
-        
-            # If user has a saved preference in config, try to match it
+
+            # Provider selection (ComfyUI or OpenAI)
             comfyui_config = config_manager.get_comfyui_config()
-            # Select config based on template type (image or video)
             media_config_key = "video" if template_media_type == "video" else "image"
-            saved_workflow = comfyui_config.get(media_config_key, {}).get("default_workflow", "")
-            if saved_workflow and saved_workflow in workflow_keys:
-                default_workflow_index = workflow_keys.index(saved_workflow)
-        
-            workflow_display = st.selectbox(
-                "Workflow",
-                workflow_options if workflow_options else ["No workflows found"],
-                index=default_workflow_index,
-                label_visibility="collapsed",
-                key="media_workflow_select"
-            )
-        
-            # Get the actual workflow key (e.g., "runninghub/image_flux.json")
-            if workflow_options:
-                workflow_selected_index = workflow_options.index(workflow_display)
-                workflow_key = workflow_keys[workflow_selected_index]
+            saved_provider = comfyui_config.get(media_config_key, {}).get("provider", "comfyui")
+
+            # Only show provider selector for image templates (not video)
+            if template_media_type == "image":
+                provider_options = {"comfyui": "ComfyUI", "openai": "OpenAI"}
+                selected_provider = st.radio(
+                    "Image Provider",
+                    options=list(provider_options.keys()),
+                    format_func=lambda x: provider_options[x],
+                    index=0 if saved_provider != "openai" else 1,
+                    horizontal=True,
+                    key="image_provider_selector",
+                )
             else:
-                workflow_key = "runninghub/image_flux.json"  # fallback
-            
-            # Check and warn for selfhost media workflow (auto popup if not confirmed)
-            check_and_warn_selfhost_workflow(workflow_key)
+                selected_provider = "comfyui"
+
+            if selected_provider == "openai" and template_media_type == "image":
+                # OpenAI provider: show config info instead of workflow selector
+                openai_config = comfyui_config.get("image", {}).get("openai", {})
+                st.info(f"OpenAI Model: **{openai_config.get('model', 'gpt-image-2')}** | Size: **{openai_config.get('size', '1024x1024')}** | Quality: **{openai_config.get('quality', 'medium')}**")
+
+                # OpenAI size selector
+                openai_size = st.selectbox(
+                    "Output Size",
+                    options=["1024x1024", "1536x1024", "1024x1536", "auto"],
+                    index=0,
+                    key="openai_size_select",
+                )
+
+                # No workflow key needed for OpenAI
+                workflow_key = None
+
+                # Override provider in media service for this session
+                if hasattr(pixelle_video.media, '_create_and_set_backend'):
+                    pixelle_video.media._create_and_set_backend("openai")
+            else:
+                # ComfyUI provider: show workflow selector (existing code)
+                # Restore ComfyUI backend if switching from OpenAI
+                if hasattr(pixelle_video.media, '_create_and_set_backend'):
+                    pixelle_video.media._create_and_set_backend("comfyui")
+
+                # Get available workflows and filter by template type
+                all_workflows = pixelle_video.media.list_workflows()
+
+                # Filter workflows based on template media type
+                if template_media_type == "video":
+                    # Only show video_ workflows
+                    workflows = [wf for wf in all_workflows if "video_" in wf["key"].lower()]
+                else:
+                    # Only show image_ workflows (exclude video_)
+                    workflows = [wf for wf in all_workflows if "video_" not in wf["key"].lower()]
+
+                # Build options for selectbox
+                # Display: "image_flux.json - Runninghub"
+                # Value: "runninghub/image_flux.json"
+                workflow_options = [wf["display_name"] for wf in workflows]
+                workflow_keys = [wf["key"] for wf in workflows]
+
+                # Default to first option (should be runninghub by sorting)
+                default_workflow_index = 0
+
+                # If user has a saved preference in config, try to match it
+                saved_workflow = comfyui_config.get(media_config_key, {}).get("default_workflow", "")
+                if saved_workflow and saved_workflow in workflow_keys:
+                    default_workflow_index = workflow_keys.index(saved_workflow)
+
+                workflow_display = st.selectbox(
+                    "Workflow",
+                    workflow_options if workflow_options else ["No workflows found"],
+                    index=default_workflow_index,
+                    label_visibility="collapsed",
+                    key="media_workflow_select"
+                )
+
+                # Get the actual workflow key (e.g., "runninghub/image_flux.json")
+                if workflow_options:
+                    workflow_selected_index = workflow_options.index(workflow_display)
+                    workflow_key = workflow_keys[workflow_selected_index]
+                else:
+                    workflow_key = "runninghub/image_flux.json"  # fallback
+
+                # Check and warn for selfhost media workflow (auto popup if not confirmed)
+                check_and_warn_selfhost_workflow(workflow_key)
         
             # Get media size from template
             media_width = st.session_state.get('template_media_width')
@@ -860,6 +902,7 @@ def render_style_config(pixelle_video):
             # Set default values for later use
             workflow_key = None
             prompt_prefix = ""
+            selected_provider = "comfyui"
     
     # Return all style configuration parameters
     return {
@@ -871,6 +914,7 @@ def render_style_config(pixelle_video):
         "frame_template": frame_template,
         "template_params": custom_values_for_video if custom_values_for_video else None,
         "media_workflow": workflow_key,
+        "media_provider": selected_provider if template_media_type == "image" else "comfyui",
         "prompt_prefix": prompt_prefix if prompt_prefix else "",
         "media_width": media_width,
         "media_height": media_height
