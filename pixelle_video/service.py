@@ -202,13 +202,9 @@ class PixelleVideoCore:
         self.image_analysis = ImageAnalysisService(self.config, core=self)
         self.video_analysis = VideoAnalysisService(self.config, core=self)
 
-        # GLM analysis service (optional, won't block startup if not configured)
-        glm_config = self.config.get("glm", {})
-        try:
-            self.glm_analysis = GLMAnalysisService(glm_config)
-        except ValueError as e:
-            logger.warning(f"GLM analysis service not available: {e}")
-            self.glm_analysis = None
+        # GLM analysis service (lazy, hot-reloads on config change)
+        self._glm_analysis = None
+        self._glm_config_hash = None
 
         self.video = VideoService()
         self.frame_processor = FrameProcessor(self)
@@ -304,20 +300,42 @@ class PixelleVideoCore:
         
         return generate_video_wrapper
 
+    def _get_or_create_glm_analysis(self) -> Optional['GLMAnalysisService']:
+        """Get or create GLMAnalysisService (lazy, hot-reloads on config change)"""
+        # Always read latest GLM config from config_manager (not cached self.config)
+        current_glm_config = config_manager.get_glm_config()
+        current_hash = self._compute_comfykit_config_hash(current_glm_config)
+
+        if self._glm_analysis is not None and self._glm_config_hash == current_hash:
+            return self._glm_analysis
+
+        try:
+            self._glm_analysis = GLMAnalysisService(current_glm_config)
+            self._glm_config_hash = current_hash
+            logger.info("GLM analysis service created/recreated")
+            return self._glm_analysis
+        except ValueError as e:
+            self._glm_analysis = None
+            self._glm_config_hash = current_hash
+            logger.warning(f"GLM analysis service not available: {e}")
+            return None
+
     async def analyze_image(self, image_path: str, provider: str = "comfyui", source: str = "runninghub") -> str:
         """Unified image analysis entry point"""
         if provider == "glm":
-            if self.glm_analysis is None:
+            glm = self._get_or_create_glm_analysis()
+            if glm is None:
                 raise Exception("GLM analysis service not configured")
-            return await self.glm_analysis.analyze_image(image_path)
+            return await glm.analyze_image(image_path)
         return await self.image_analysis(image_path, source=source)
 
     async def analyze_video(self, video_path: str, provider: str = "comfyui", source: str = "runninghub") -> str:
         """Unified video analysis entry point"""
         if provider == "glm":
-            if self.glm_analysis is None:
+            glm = self._get_or_create_glm_analysis()
+            if glm is None:
                 raise Exception("GLM analysis service not configured")
-            return await self.glm_analysis.analyze_video(video_path)
+            return await glm.analyze_video(video_path)
         return await self.video_analysis(video_path, source=source)
 
     @property
